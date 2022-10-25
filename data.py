@@ -22,6 +22,9 @@ class MicroscopyData(object):
         )
         self.full_batch_features = os.path.join(self.data_path, self.batch_features)
         self.ftype = self.data_name[self.data_name.rfind(".") + 1 :]
+        self.traj_file_path = self.data_name[: self.data_name.rfind(".")] + "_traj.csv"
+        self.full_traj_file_path = os.path.join(self.data_path, self.traj_file_path)
+
         if self.ftype == "nd2":
             self.frames = ND2Reader_SDK(self.full_path)
             self.timpoints = {

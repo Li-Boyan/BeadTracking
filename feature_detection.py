@@ -6,6 +6,7 @@ import trackpy as tp
 import numpy as np
 from dash import Dash, dcc, html, Input, Output, State
 from data import MicroscopyData
+from tqdm import tqdm
 import pickle
 
 
@@ -238,9 +239,9 @@ def test_params(dataset):
         State("param4-min", "value"),
         State("param4-max", "value"),
         State("param5-min", "value"),
-        State("param5-min", "value"),
+        State("param5-max", "value"),
         State("param6-min", "value"),
-        State("param6-min", "value"),
+        State("param6-max", "value"),
         Input("param-set-button", "n_clicks"),
     )
     def update_figure_size_determination(
@@ -286,6 +287,7 @@ def test_params(dataset):
             separation=d + sep,
             engine="numba",
         )
+        print(param6_min, param6_max)
         param_settings = [
             d,
             sep,
@@ -430,29 +432,30 @@ def run_batch(dataset):
     with open(dataset.full_feature_param_settings, "rb") as f:
         settings = pickle.load(f)
     print(settings)
-    feature_df_batch = tp.batch(
+    features = tp.batch(
         dataset.track_frames,
         settings[0],
         minmass=settings[2][0],
         maxsize=settings[3][1],
-        separation=settings[1],
+        separation=settings[0] + settings[1],
         engine="numba",
+        processes=16,
     )
-    feature_df_batch = feature_df_batch[
+    features = features[
         (
-            (feature_df_batch.mass <= settings[2][1])
-            & (feature_df_batch.size >= settings[3][0])
-            & (feature_df_batch.ecc >= settings[4][0])
-            & (feature_df_batch.ecc <= settings[4][1])
-            & (feature_df_batch.signal >= settings[5][0])
-            & (feature_df_batch.signal <= settings[5][1])
-            & (feature_df_batch.raw_mass >= settings[6][0])
-            & (feature_df_batch.raw_mass <= settings[6][1])
-            & (feature_df_batch.ep >= settings[7][0])
-            & (feature_df_batch.ep <= settings[7][1])
+            (features.mass <= settings[2][1])
+            & (features.size >= settings[3][0])
+            & (features.ecc >= settings[4][0])
+            & (features.ecc <= settings[4][1])
+            & (features.signal >= settings[5][0])
+            & (features.signal <= settings[5][1])
+            & (features.raw_mass >= settings[6][0])
+            & (features.raw_mass <= settings[6][1])
+            & (features.ep >= settings[7][0])
+            & (features.ep <= settings[7][1])
         )
     ]
-    feature_df_batch.to_csv(dataset.full_batch_features)
+    features.to_csv(dataset.full_batch_features, index=False)
 
 
 def main():

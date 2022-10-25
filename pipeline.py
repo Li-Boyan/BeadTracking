@@ -7,7 +7,7 @@ pipeline.py: process the raw data of NGS
 Boyan Li
 
 Usage:
-    pipeline.py --date=<str> --file=<str> --track-channel=<int> [--test]
+    pipeline.py --date=<str> --file=<str> --track-channel=<int> [--test|--feature-detect|--track|--full]
 
 Options:
     -h --help                               show this screen.
@@ -15,11 +15,14 @@ Options:
     --file=<str>                            name of the data file.
     --track-channel=<int>                   channel to perform tracking.
     --test                                  test parameters interactively.
+    --feature-detect                        run only feature detection
+    --track                                 run only tracking
 """
 
 import os
 from data import MicroscopyData
 from feature_detection import test_params, run_batch
+from track import run_tracking, filter_traj
 from docopt import docopt
 
 
@@ -33,8 +36,12 @@ def run_pipeline():
     if args["--test"]:
         app = test_params(raw_data)
         app.run_server(debug=True)
-    else:
+    elif args["--feature-detect"]:
         run_batch(raw_data)
+    elif args["--track"]:
+        run_tracking(raw_data, 1, 100, 5)
+        filter_traj(raw_data)
+
 
 
 if __name__ == "__main__":
