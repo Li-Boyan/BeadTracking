@@ -7,7 +7,10 @@ import numpy as np
 from dash import Dash, dcc, html, Input, Output, State
 from data import MicroscopyData
 from tqdm import tqdm
+import pandas as pd
 import pickle
+import multiprocessing
+from functools import partial
 
 
 def test_params(dataset):
@@ -428,18 +431,16 @@ def test_params(dataset):
     return app
 
 
-def run_batch(dataset):
-    with open(dataset.full_feature_param_settings, "rb") as f:
-        settings = pickle.load(f)
-    print(settings)
-    features = tp.batch(
-        dataset.track_frames,
+def locate(image, i, settings, feature_path):
+    # Subprocess for feature detection on one frame
+    print("Frame %d ... " % i, end="")
+    features = tp.locate(
+        image,
         settings[0],
         minmass=settings[2][0],
         maxsize=settings[3][1],
         separation=settings[0] + settings[1],
         engine="numba",
-        processes=16,
     )
     features = features[
         (
@@ -455,14 +456,30 @@ def run_batch(dataset):
             & (features.ep <= settings[7][1])
         )
     ]
-    features.to_csv(dataset.full_batch_features, index=False)
+    features["frame"] = i
+    print("Number of features: %d" % len(features))
+    return features
+
+
+def locate_batch(dataset, parallel=4):
+    with open(dataset.full_feature_param_settings, "rb") as f:
+        settings = pickle.load(f)
+    print(settings)
+    pool = multiprocessing.Pool(processes=parallel)
+    nframes = len(dataset.track_frames)
+    locate_frame = partial(
+        locate, settings=settings, feature_path=dataset.full_batch_features
+    )
+    features_result = pool.starmap(
+        locate_frame, list(zip(dataset.track_frames, np.arange(nframes)))
+    )
+    feature_df_batch = pd.concat(features_result)
+    feature_df_batch.to_hdf(dataset.full_batch_features, key="features")
 
 
 def main():
     raw_data = MicroscopyData("../data/220930", "220930_0.2um-beads003.nd2")
     raw_data.generate_track_frames(1)
-    app = test_feature_size(raw_data)
-    app.run_server(debug=True)
 
 
 if __name__ == "__main__":
