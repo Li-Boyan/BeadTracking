@@ -1,8 +1,5 @@
 # Bead tracking and trajectory analysis
 
-
-This repository includes the code for generating all figures for `Rectified Signal Propagation in Synthetic Optogenetic STING system`.
-
 ## OS requirements
 The code was tested on the following systems:
 - Linux: Ubuntu 22.04
